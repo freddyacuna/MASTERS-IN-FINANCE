@@ -1,1 +1,191 @@
+---
+title: "ENFIN 783 R PARA FINANZAS — Otoño 2022"
+author: "Control 1"
+date: '2022-04-20'
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(readr)
+library(readr)
+library(dplyr)
+
+
+library(janitor)
+library(skimr)
+library(kableExtra)
+
+```
+
+# Instrucciones
+
+* El Control 1 es PRESENCIAL e INDIVIDUAL.
+* Usted dispone desde las 9:30 am hasta las 10:50 am (1 hora y 20 minutos) del día miércoles 20 de Abril del 2022 para desarrollar y subir el control a Canvas. Se recomienda estar instalado con el pc en la sala de clases a más tardar las 9:30.
+
+* Debe desarrollar el control en UN SOLO RMD de R con extensión .Rmd y subirlo a Canvas antes de las 10:50 am del día miércoles 20 de Abril del 2022.
+
+* El nombre del archivo debe ser Control_01_RUT sin puntos ni guión.py. Ejemplo: si su rut es
+12.345.678-9, el nombre del archivo deberá ser Control_01_123456789.Rmd. Puede usar también su pasaporte.
+
+* Toda pregunta que involucre una respuesta escrita deberá ser respondida mediante un comentario en el archivo .Rmd.
+
+* En caso que tenga alguna duda respecto al desarrollo de su control, puede indicar su supuesto como comentario en el archivo .Rmd, cuya pertinencia será analizada al momento de corregir.
+
+* Cualquier indicio de copia será evaluado con nota 1.0 y se tomarán las acciones que estipula el reglamento de TOLERANCIA CERO A LA COPIA de la Escuela de Postgrado.
+
+
+
+
+\newpage
+
+# Pregunta 1
+
+Se dispone de las siguientes 14 observaciones:
+
+|       |      |       |
+|------:|-----:|------:|
+|  1.24 | 0.36 |  0.26 |
+|  0.24 | 1.78 | -2.00 |
+| -0.11 | 0.69 |  0.24 |
+|  0.10 | 0.03 |  0.00 |
+| -2.40 | 0.12 |       |
+
+Calcule la media podada* $k=1$ de las observaciones anteriores, usando la siguiente formula:
+
+$$\bar{X}^P=\frac{1}{n-2k}\sum^{n-k}_{i=k+1} Y_i$$
+(*) Para calcular la Media Podada, primero se ordenan los datos en forma creciente y luego se eliminan la cantidad de k datos en cada extremo.
+
+
+```{r echo = FALSE}
+# media podada k1 = 0,095
+
+```
+
+```{r}
+x = c(1.24, 0.36, 0.26, 0.24, 1.78, -2.00, -0.11, 
+      0.69, 0.24, 0.10, 0.03, 0.00, -2.40, 0.12)
+
+x <- (sum(x) - min(x) - max(x) )/ (length(x)-2)
+
+x
+```
+
+
+# Pregunta 2
+
+Calcule el valor presente de un flujo de efectivo múltiple utilizando la siguiente fórmula:
+
+$$ Precio = \frac{c}{(1+r_1)^1} + \frac{c}{(1+r_2)^2} + \frac{c}{(1+r_3)^3} + ... + \frac{c + R}{(1+r_n)^n} $$
+
+donde $c$ es el cupón, $R$ es el pago de rescate en el momento $n$, $r_i$ es el \% de tasa de retorno que se usa en el $i^{esimo}$ período para descontar el flujo de efectivo, y $n$ es el número de periodos. **HINT**: Tenga en cuenta que para cada período se usa una tasa de descuento diferente.
+
+Considere la siguiente información para calcular el valor presente de su flujo:
+
+| Parámetros | Valores |
+|------------|---------|
+|     $R$    |  1000   |
+|     $c$    |  500    |
+|     $n$    |    20   |
+|     $r_i$  |10\% con incrementos 0.3    |
+
+
+
+```{r echo = FALSE}
+
+
+```
+
+
+
+\newpage
+
+
+Usando los datos de ingresos por matrícula universitaria disponibles en el archivo [tuition.csv](), responda las siguientes preguntas:
+
+
+
+
+```{r echo = FALSE}
+library(jsonlite)
+tuition_income <- fromJSON("tuition.json")
+
+```
+
+```{r message  = FALSE , warning =FALSE, echo = FALSE}
+library(dplyr)
+library(janitor)
+library(skimr)
+library(kableExtra)
+```
+
+
+# Pregunta 3
+
+Constuya una tabla que muestre la cantidad de registros para cada año y el total de la base de datos. Además, agregue la proporción de cada año respecto al total.
+
+```{r}
+tuition_income
+```
+
+```{r}
+tuition_income %>% 
+  group_by(year) %>% 
+  select(year) %>%
+count() %>% ungroup() %>%
+mutate(prop_agno = round((n/sum(n))*100, 1)) %>%
+adorn_totals("row")
+
+```
+
+
+
+# Pregunta 4
+
+Construya una tabla que muestre los nombres de los 5 estados que declararon un mayor monto de costo neto (`net_cost`) y el monto de costo neto correspondiente. Considere los montos en miles de dólares.
+
+```{r}
+tuition_income %>%  group_by(state) %>% 
+  summarise(monto_agreg = sum(net_cost)/100000) %>% 
+  slice_max(monto_agreg, n = 5) 
+```
+
+
+# Pregunta 5
+
+Construya una tabla que muestre para cada campus el promedio de los precios totales (`total_price`) para los años 2016, 2017 y 2018. 
+
+```{r}
+
+tuition %>% filter(year==2016|year==2017|year==2018) %>% select(campus,total_price,year) %>% group_by(campus,year) %>% summarise(mean(total_price)) 
+
+```
+
+
+
+
+# Pregunta 6
+
+Construya una tabla que muestre la estadística descriptiva para los montos netos por cada nivel de ingreso (`income_lvl`). Dicha tabla debe contener la media aritmetica, y desviación estándar. 
+
+```{r}
+tuition_income %>% 
+  group_by(income_lvl) %>%
+  summarise(promedio = mean(net_cost), desviacion = sd(net_cost) ) 
+  
+```
+
+```{r}
+tuition_income %>% 
+  select(net_cost, income_lvl)%>%
+  group_by(income_lvl)%>%  
+  skim() %>%  yank("numeric")%>%
+  select(-c("skim_variable", "n_missing", "complete_rate", "hist")) %>%
+  kbl(booktabs = T, digits = 2, linesep ="",
+      col.names = c("Criptomoneda", "Media", "Desv. Est.", "Min", "p25", "p50", "p75", "Max")) %>%
+  kable_styling(font_size = 10, latex_options = c("striped", "hold_position"))
+```
+
+
+
 
