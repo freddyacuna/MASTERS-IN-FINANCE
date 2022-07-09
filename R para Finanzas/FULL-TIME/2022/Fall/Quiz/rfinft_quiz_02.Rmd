@@ -192,26 +192,11 @@ ff_portfolio_returns$date <- as.Date(ff_portfolio_returns$date )
 Construya el siguiente gráfico que muestra el retorno acumulado para su portafolio desde 2011 a 2019, incluya la media móvil de 5 y 22 días.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
-ff_portfolio_returns %>% mutate(returns_acum = returns %>% cumsum ) %>%
-ggplot(aes(x = date, y = returns_acum)) +
-geom_line() +
-geom_ma(ma_fun = SMA, n = 5, linetype = "twodash", size = 0.8, color = "red") +
-  geom_ma(ma_fun = SMA, n =22, linetype = "twodash", size = 0.8, color = "blue") +
-scale_x_date(date_breaks = "1 years", date_labels = "%Y") +
-labs(title = "Retornos acumulados del portafolio",
-caption = paste0("Fuente: Portafolio de 40% COPEC, 40% Falabella y 20% LATAM.",
-"\n",
-"Elaboración propia"),
-x = NULL,
-y = "Retornos acumulados") +
-theme_tq()
+
 ```
 
 ```{r}
 
-
-ff_portfolio_returns %>%
- ggplot(aes(x = date, y = cumsum(returns))) + geom_line() + geom_ma(ma_fun = SMA, n = 5, linetype = "twodash", size = 0.8, color = "red") + geom_ma(ma_fun = SMA, n = 22, linetype = "twodash", size = 0.8, color = "blue") + scale_x_date(date_breaks = "1 years", date_labels = "%Y")  + labs(title = "Retornos acumulados del portafolio", caption = paste0("Fuente: Portafolio de 40% COPEC, 40% Falabella y 20% LATAM.","\n","Elaboración propia")) + ylab("Retornos acumulados") + theme_tq()
 ```
 
 \newpage
@@ -224,24 +209,11 @@ $$(R_{it}-R_{ft})=\beta_0 + \beta_1(R_{mt}-R_{ft})+\beta_2SMB_t+\beta_3HML_t+u_{
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE,eval=FALSE}
-ff_portfolio_returns <- 
-  portfolio_returns_monthly %>% 
-  left_join(Global_3_Factors_filter, by = "date") %>% 
-  mutate(MKT_RF = Global_3_Factors_filter$`Mkt-RF`/100,
-         SMB = Global_3_Factors_filter$SMB/100,
-         HML = Global_3_Factors_filter$HML/100,
-         RF = Global_3_Factors_filter$RF/100,
-         R_excess = round(returns - RF, 4))
+
 ```
 
 ```{r}
-ff_portfolio_returns2 <- 
-  ff_portfolio_returns %>% 
-  mutate(MKT_RF = ff_portfolio_returns$`Mkt-RF`/100,
-         SMB = ff_portfolio_returns$SMB/100,
-         HML = ff_portfolio_returns$HML/100,
-         RF = ff_portfolio_returns$RF/100,
-         R_excess = (returns - RF))
+
 ```
 
 
@@ -249,44 +221,16 @@ ff_portfolio_returns2 <-
 Estime el modelo especificado arriba usando *Mínimos Cuadrados Ordinarios* y corrigiendo por heterocedasticidad.  Presente sus resultados en una sola tabla como se muestra a continuación. **Hint**: Las variables explicativas fueron escaladas diviendo por 100.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
-lm(R_excess  ~ MKT_RF + SMB + HML, data=ff_portfolio_returns2) %>% 
-  tidy(model, conf.int = T, conf.level = .95) 
+
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
-lm(R_excess  ~ MKT_RF + SMB + HML, data=ff_portfolio_returns2,vcov = hccm) %>% 
-  tidy(model, conf.int = T, conf.level = .95) 
+
 ```
 
 ```{r}
-portafolio3<- ff_portfolio_returns %>% 
-  mutate(RF =RF/100,
-         mkt_100 = `Mkt-RF`/100,
-         smb_100 = SMB/100,
-         hml_100 = HML /100,
-         Y = (returns- RF))
-
-lm1<- lm(Y ~  mkt_100 + smb_100 + hml_100,
-   data = portafolio3)
 
 
-
-#s<- summary(lm1)[,2]
-
-s<- coeftest(lm1, vcov = vcovHC(lm1, "HC1"))
-
-s
-
-table1<- tibble(Variable = c("Intercepto", "MKT_RF/100","SMB/100" ,"HML/100"), 
-       `Coef. Estimado` = s[,1], 
-       `Error estándar` = s[,2], 
-       `p-value` = s[,4], 
-       `IC inferior` = `Coef. Estimado`- 1.96*`Error estándar`, 
-       `IC superior` = `Coef. Estimado`+ 1.96*`Error estándar`)
-
-table1 %>%
-  kbl() #%>% 
-  #kable_styling(round(digits = 3)) 
 
 
 ```
@@ -305,22 +249,6 @@ $$H_0: \beta_1 = \beta_2 = \beta_3 = 0$$
 
 ```{r eval=FALSE, echo=FALSE}
 
-lm(returns  ~ MKT_RF + SMB + HML, data=ff_portfolio_returns) %>% 
-  tidy(model, conf.int = T, conf.level = .95)  %>% 
-  mutate_if(is.numeric, funs(round(., 3))) %>%
-  filter(term != "(Intercept)") %>% 
-  ggplot(aes(x = term, y = estimate, shape = term, color = term)) + 
-  geom_point() +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
-  labs(title = "FF 3-Factor Coefficients for Our Portfolio",
-       subtitle = "nothing in this post is investment advice",
-       x = "",
-       y = "coefficient",
-       caption = "data source: Fama French website and yahoo! Finance") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5),
-        plot.caption  = element_text(hjust = 0))
 ```
 
 
@@ -335,7 +263,7 @@ dates <- c("7 de Enero de 1991", "Febrero de 1998", "21 de Mayo de 1879")
 ```
 
 ```{r}
-str_count(dates, "[\\d\\(\\)]")
+
 ```
 
 
@@ -350,7 +278,6 @@ words <- c("yegüita", "ñandú", "orangután")
 
 ```{r}
 
-str_count(words, "[aeiouüúá]")
 ```
 
 
