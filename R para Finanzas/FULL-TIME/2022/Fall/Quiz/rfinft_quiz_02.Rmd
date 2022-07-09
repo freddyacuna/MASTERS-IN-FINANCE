@@ -1,1 +1,356 @@
+---
+title: "ENFIN 783 R PARA FINANZAS — Otoño 2022"
+author: "Control 2"
+date: '2022-06-15'
+output: pdf_document
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+library(dplyr)
+library(readr)
+library(readr)
+library(dplyr)
+
+
+library(janitor)
+library(skimr)
+library(kableExtra)
+
+```
+
+# Instrucciones
+
+* El Control 2 es PRESENCIAL e INDIVIDUAL.
+* Usted dispone desde las 9:30 am hasta las 10:50 am (1 hora y 20 minutos) del día miércoles 15 de junio del 2022 para desarrollar y subir el control a Canvas. Se recomienda estar instalado con el pc en la sala de clases a más tardar las 9:30.
+
+* Debe desarrollar el control en UN SOLO RMD de R con extensión .Rmd y subirlo a Canvas antes de las 10:50 am del día miércoles 15 de junio del 2022.
+
+* El nombre del archivo debe ser Control_02_RUT sin puntos ni guión.py. Ejemplo: si su rut es
+12.345.678-9, el nombre del archivo deberá ser Control_02_123456789.Rmd. Puede usar también su pasaporte.
+
+* Toda pregunta que involucre una respuesta escrita deberá ser respondida mediante un comentario en el archivo .Rmd.
+
+* En caso que tenga alguna duda respecto al desarrollo de su control, puede indicar su supuesto como comentario en el archivo .Rmd, cuya pertinencia será analizada al momento de corregir.
+
+* Cualquier indicio de copia será evaluado con nota 1.0 y se tomarán las acciones que estipula el reglamento de TOLERANCIA CERO A LA COPIA de la Escuela de Postgrado.
+
+
+
+
+\newpage
+
+
+
+En el siguiente archivo [*\textcolor{blue}{portafolio control 2}*]() encontrará los retornos mensuales de un portafolio compuesto 40% por acciones de COPEC, 40% por acciones de Falabella y 20% por acciones de LATAM para el período 31-12-2010 al 31-12-2018. Además de incluir 4 columnas de factores. El detalle de cada columna es: 
+
+* `date`: Fecha
+* `returns`: Retornos mensuales del portafolio
+* `Mkt-RF`: Rendimientos de mercado por sobre la tasa libre de riesgo ($R_{mt}-R_{ft}$). 
+* `SMB`: Factor tamaño.
+* `HML`: Factor value.
+* `RF `: Tasa libre de riesgo.
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+library(glue)
+library(readr)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(tidyquant)
+
+library(tidyverse)
+library(timetk)
+library(broom)
+
+library(janitor)
+library(kableExtra)
+library(skimr)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+
+symbols <- c("SPY","EFA", "IJS", "EEM","AGG")
+
+prices <- 
+  getSymbols(symbols, src = 'yahoo', 
+             from = "2010-12-31",
+           to   = "2018-12-31",
+             auto.assign = TRUE, warnings = FALSE) %>% 
+  map(~Ad(get(.))) %>%
+  reduce(merge) %>% 
+  `colnames<-`(symbols)
+
+peso_acciones <- tibble(symbols = c("SPY","EFA", "IJS", "EEM","AGG"),
+weights = c(0.25, 0.25, 0.20, 0.20, 0.10))
+
+
+asset_returns_long <-  
+  prices %>% 
+  to.monthly(indexAt = "lastof", OHLC = FALSE) %>% 
+  tk_tbl(preserve_index = TRUE, rename_index = "date") %>%
+  gather(asset, returns, -date) %>% 
+  group_by(asset) %>%  
+  mutate(returns = (log(returns) - log(lag(returns)))) %>% 
+  na.omit()
+
+portfolio_returns_monthly <- 
+  asset_returns_long %>%
+  tq_portfolio(assets_col  = asset, 
+               returns_col = returns,
+               weights     = peso_acciones,
+               col_rename  = "returns",
+               rebalance_on = "months")
+
+```
+
+
+
+
+```{r eval=FALSE, echo=FALSE}
+
+
+stock_returns_monthly <- c("COPEC.SN","FALABELLA.SN","LTM.SN") %>%
+     tq_get(get  = "stock.prices",
+           from = "2010-12-31",
+           to   = "2018-12-31") %>%
+    group_by(symbol) %>%
+   tq_transmute(select= close, 
+                 mutate_fun = periodReturn, 
+                 period     = "monthly", 
+                 type = "log",                     
+                  col_rename = "returns_monthly")
+
+wts <- c(0.25, 0.35, 0.4)
+portfolio_returns_monthly <- stock_returns_monthly %>%
+    tq_portfolio(assets_col  = symbol, 
+                 returns_col = returns_monthly, 
+                 weights     = wts, 
+                 col_rename  = "portfolio",
+                 rebalance_on = "months")
+portfolio_returns_monthly
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+
+temp <- tempfile()
+
+base <- 
+"http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+
+factor <- 
+  "Global_3_Factors"
+
+format<-
+  "_CSV.zip"
+
+full_url <-
+  glue(base,
+        factor,
+        format,
+        sep ="")
+
+download.file(
+full_url,
+temp,
+quiet = TRUE)
+
+Global_3_Factors <- 
+  read_csv(unz(temp, 
+               "Global_3_Factors.csv"),skip = 6,n_max=348 )%>%  rename(date = `...1`) %>% 
+  mutate_at(vars(-date), as.numeric) %>% 
+  mutate(date = 
+           rollback(ymd(parse_date_time(date, "%Y%m") + months(1))))
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+Global_3_Factors_filter <- Global_3_Factors %>% filter(date >=  first(portfolio_returns_monthly$date) & date <= last(portfolio_returns_monthly$date))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+ff_portfolio_returns <- 
+  portfolio_returns_monthly %>% 
+  left_join(Global_3_Factors_filter, by = "date") 
+```
+
+```{r}
+ff_portfolio_returns <- read_excel("portafolio control 2 (1).xlsx") 
+ff_portfolio_returns$date <- as.Date(ff_portfolio_returns$date )
+```
+
+
+
+## Pregunta 1 (10 puntos)
+
+
+Construya el siguiente gráfico que muestra el retorno acumulado para su portafolio desde 2011 a 2019, incluya la media móvil de 5 y 22 días.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+ff_portfolio_returns %>% mutate(returns_acum = returns %>% cumsum ) %>%
+ggplot(aes(x = date, y = returns_acum)) +
+geom_line() +
+geom_ma(ma_fun = SMA, n = 5, linetype = "twodash", size = 0.8, color = "red") +
+  geom_ma(ma_fun = SMA, n =22, linetype = "twodash", size = 0.8, color = "blue") +
+scale_x_date(date_breaks = "1 years", date_labels = "%Y") +
+labs(title = "Retornos acumulados del portafolio",
+caption = paste0("Fuente: Portafolio de 40% COPEC, 40% Falabella y 20% LATAM.",
+"\n",
+"Elaboración propia"),
+x = NULL,
+y = "Retornos acumulados") +
+theme_tq()
+```
+
+```{r}
+
+
+ff_portfolio_returns %>%
+ ggplot(aes(x = date, y = cumsum(returns))) + geom_line() + geom_ma(ma_fun = SMA, n = 5, linetype = "twodash", size = 0.8, color = "red") + geom_ma(ma_fun = SMA, n = 22, linetype = "twodash", size = 0.8, color = "blue") + scale_x_date(date_breaks = "1 years", date_labels = "%Y")  + labs(title = "Retornos acumulados del portafolio", caption = paste0("Fuente: Portafolio de 40% COPEC, 40% Falabella y 20% LATAM.","\n","Elaboración propia")) + ylab("Retornos acumulados") + theme_tq()
+```
+
+\newpage
+
+## Pregunta 2
+
+Usando los datos del portafolio se estimará el siguiente modelo que muestra la relación entre tres factores y el exceso del portafolio 
+
+$$(R_{it}-R_{ft})=\beta_0 + \beta_1(R_{mt}-R_{ft})+\beta_2SMB_t+\beta_3HML_t+u_{it}$$
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE,eval=FALSE}
+ff_portfolio_returns <- 
+  portfolio_returns_monthly %>% 
+  left_join(Global_3_Factors_filter, by = "date") %>% 
+  mutate(MKT_RF = Global_3_Factors_filter$`Mkt-RF`/100,
+         SMB = Global_3_Factors_filter$SMB/100,
+         HML = Global_3_Factors_filter$HML/100,
+         RF = Global_3_Factors_filter$RF/100,
+         R_excess = round(returns - RF, 4))
+```
+
+```{r}
+ff_portfolio_returns2 <- 
+  ff_portfolio_returns %>% 
+  mutate(MKT_RF = ff_portfolio_returns$`Mkt-RF`/100,
+         SMB = ff_portfolio_returns$SMB/100,
+         HML = ff_portfolio_returns$HML/100,
+         RF = ff_portfolio_returns$RF/100,
+         R_excess = (returns - RF))
+```
+
+
+### Pregunta 2.1 (10 puntos)
+Estime el modelo especificado arriba usando *Mínimos Cuadrados Ordinarios* y corrigiendo por heterocedasticidad.  Presente sus resultados en una sola tabla como se muestra a continuación. **Hint**: Las variables explicativas fueron escaladas diviendo por 100.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+lm(R_excess  ~ MKT_RF + SMB + HML, data=ff_portfolio_returns2) %>% 
+  tidy(model, conf.int = T, conf.level = .95) 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+lm(R_excess  ~ MKT_RF + SMB + HML, data=ff_portfolio_returns2,vcov = hccm) %>% 
+  tidy(model, conf.int = T, conf.level = .95) 
+```
+
+```{r}
+portafolio3<- ff_portfolio_returns %>% 
+  mutate(RF =RF/100,
+         mkt_100 = `Mkt-RF`/100,
+         smb_100 = SMB/100,
+         hml_100 = HML /100,
+         Y = (returns- RF))
+
+lm1<- lm(Y ~  mkt_100 + smb_100 + hml_100,
+   data = portafolio3)
+
+
+
+#s<- summary(lm1)[,2]
+
+s<- coeftest(lm1, vcov = vcovHC(lm1, "HC1"))
+
+s
+
+table1<- tibble(Variable = c("Intercepto", "MKT_RF/100","SMB/100" ,"HML/100"), 
+       `Coef. Estimado` = s[,1], 
+       `Error estándar` = s[,2], 
+       `p-value` = s[,4], 
+       `IC inferior` = `Coef. Estimado`- 1.96*`Error estándar`, 
+       `IC superior` = `Coef. Estimado`+ 1.96*`Error estándar`)
+
+table1 %>%
+  kbl() #%>% 
+  #kable_styling(round(digits = 3)) 
+
+
+```
+
+### Pregunta 2.2 (10 puntos)
+Comente sus resultados obtenidos en relación a la pendiente de `SMB` desde los aspectos (i) financiero y (ii) estadístico. Debe interpretar el coeficiente estimado y su significancia estadística.
+
+
+### Pregunta 2.3 (10 puntos)
+
+Considerando un nivel de significancia del 1%, testee la siguiente hipótesis:
+
+$$H_0: \beta_1 = \beta_2 = \beta_3 = 0$$
+
+¿Cuál es la diferencia (práctica y/o teórica) de estos test de hipótesis con otros vistos en clases?
+
+```{r eval=FALSE, echo=FALSE}
+
+lm(returns  ~ MKT_RF + SMB + HML, data=ff_portfolio_returns) %>% 
+  tidy(model, conf.int = T, conf.level = .95)  %>% 
+  mutate_if(is.numeric, funs(round(., 3))) %>%
+  filter(term != "(Intercept)") %>% 
+  ggplot(aes(x = term, y = estimate, shape = term, color = term)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  labs(title = "FF 3-Factor Coefficients for Our Portfolio",
+       subtitle = "nothing in this post is investment advice",
+       x = "",
+       y = "coefficient",
+       caption = "data source: Fama French website and yahoo! Finance") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.caption  = element_text(hjust = 0))
+```
+
+
+## Pregunta 3
+
+### Pregunta 3.1 (10 puntos)
+
+Usando expresiones regulares, determine cuántos números contiene cada elemento del vector dates.
+
+```{r}
+dates <- c("7 de Enero de 1991", "Febrero de 1998", "21 de Mayo de 1879")
+```
+
+```{r}
+str_count(dates, "[\\d\\(\\)]")
+```
+
+
+### Pregunta 3.2 (10 puntos)
+
+Usando expresiones regulares, determine cuántas vocales contiene cada elemento del vector words.
+
+```{r}
+words <- c("yegüita", "ñandú", "orangután")
+```
+
+
+```{r}
+
+str_count(words, "[aeiouüúá]")
+```
+
 
