@@ -1,0 +1,153 @@
+---
+title: "ENFIN 783 R PARA FINANZAS — Otoño 2022"
+author: "Control Recuperativo"
+date: '2022-07-06'
+output: pdf_document
+---
+
+
+# Instrucciones
+
+* El Control recuperativo es ONLINE e INDIVIDUAL.
+
+* Usted dispone desde las 19:00 hasta las 20:20  (1 hora y 20 minutos) del día miércoles 06 de Julio del 2022 para desarrollar y enviar el control por correo. Se recomienda estar instalado con el pc en la sala de clases a más tardar las 19:00.
+
+* Debe desarrollar el control en UN SOLO RMD de R con extensión .Rmd y enviarlo por correo antes de las 20:200 del día miércoles 06 de Julio del 2022.
+
+* El nombre del archivo debe ser Control_01_RUT sin puntos ni guión.py. Ejemplo: si su rut es
+12.345.678-9, el nombre del archivo deberá ser Control_Recuperativo_123456789.Rmd. Puede usar también su pasaporte.
+
+* Toda pregunta que involucre una respuesta escrita deberá ser respondida mediante un comentario en el archivo .Rmd.
+
+* En caso que tenga alguna duda respecto al desarrollo de su control, puede indicar su supuesto como comentario en el archivo .Rmd, cuya pertinencia será analizada al momento de corregir.
+
+* Cualquier indicio de copia será evaluado con nota 1.0 y se tomarán las acciones que estipula el reglamento de TOLERANCIA CERO A LA COPIA de la Escuela de Postgrado.
+
+
+
+
+\newpage
+
+# Pregunta 1
+
+Considere 9 observaciones de una variable $X$, denotadas por:
+
+|       |      |       |
+|------:|-----:|------:|
+|  1.24 | 0.36 |  0.26 |
+|  0.24 | 1.78 | -2.00 |
+| -0.11 | 0.69 |  0.24 |
+
+
+Denotemos por $\bar{x}$ y por $\hat{\sigma}$ a la media y la desviación estándar de este conjunto de observaciones, respectivamente. Considere dos transformaciones de los varlores de las observaciones dadas por:
+
+$$r_i = x_i - \bar{x}, \hspace{1cm} m_i= \frac{x_i - \bar{x}}{\hat{\sigma}}$$
+para $i=1,2,...,9$.
+
+a. Calcule la media y la varianza de $r_1,...,r_9$
+b. Calcule la media y la varianza de $m_1,...,m_9$
+
+
+# Pregunta 2
+
+Existen muchos modelos para valorizar acciones, ninguno es perfecto, pero probablemente el más clásico y del cual han surgido diversas variaciones, es el modelo de Gordon (1956).
+
+La siguiente fórmula, permite calcular la valorización de una acción en particular:
+
+$$ Precio = \sum_{t=1}^{T} D_0 \cdot \frac{(1 + g)^t}{(1+(R_f+ERP))^t} $$
+
+donde $D_0$ es el dividendo entregado en el año 0, $g$ es el crecimiento futuro de los dividendos, $R_f$ es la tasa libre de riesgo, $ERP$ es el premio por riesgo, y $t$ es el período. 
+
+Considere la siguiente información para calcular la valorización de una acción:
+
+| Parámetros | Valores |
+|------------|---------|
+|     $D_0$  |  500    |
+|     $g$    |  5\% con incremento 0.01    |
+|     $R_f$  |  2\%   |
+|     $ERP$  |  6\% con incrementos 0.03    |
+|     $T$    |  30  |
+
+
+\newpage
+
+
+Usando los datos de contraseñas disponibles en el archivo [passwords.csv](), responda las siguientes preguntas:
+
+
+
+
+```{r message  = FALSE , warning =FALSE, echo = FALSE}
+passwords <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-14/passwords.csv')
+
+```
+
+
+```{r message  = FALSE , warning =FALSE, echo = FALSE}
+library(dplyr)
+library(janitor)
+library(skimr)
+library(kableExtra)
+library(stringr)
+```
+
+
+# Pregunta 3
+
+Constuya una tabla que muestre la cantidad de contraseñas para cada `category` y el total de la base de datos. Además, agregue una columna adicional con la proporción de cada `category` respecto al total.
+
+```{r echo=FALSE, eval=FALSE}
+passwords %>% group_by(category) %>% count() %>% ungroup() %>% mutate(prop=round(n/sum(n)*100,2)) %>% 
+  rename(cantidad=n) %>% adorn_totals("row") %>% mutate(prop=paste0(prop,"%")) %>%
+kbl(booktabs =T,
+col.names =c("category","cantidad","Proporción"),
+linesep = '')%>%
+kable_styling(latex_options =c("striped","hold_position"))
+```
+
+
+# Pregunta 4
+
+Construya una tabla que identifique las 3 `password` con mayor cantidad de `strength`.
+
+
+```{r  echo=FALSE, eval=FALSE}
+passwords %>% select(password, strength) %>% slice_max(strength, n=3) %>%
+kbl(booktabs =T,
+col.names =c("password","strength"),
+linesep = '')%>%
+kable_styling(latex_options =c("striped","hold_position"))
+```
+
+
+
+# Pregunta 5
+
+Construya una tabla que muestre para cada `time_unit` el promedio de `value` unicamente para la categoría `simple-alphanumeric`. 
+
+```{r echo=FALSE, eval=FALSE}
+
+passwords %>%  filter(category=="simple-alphanumeric") %>%
+  group_by(time_unit) %>%
+  summarise(mean_value = round(mean(value),2)) %>%
+kbl(booktabs =T,
+col.names =c("time_unit","mean_value"),
+linesep = '')%>%
+kable_styling(latex_options =c("striped","hold_position"))
+  
+```
+
+# Pregunta 6
+
+Construya una tabla que muestre la estadística descriptiva para la cantidad de números que contiene `password` por cada `time_unit`. Dicha tabla debe contener la media aritmetica, desviación estándar, mínimo, percentil 25, mediana, percentil 75 y el máximo.
+
+```{r echo=FALSE, eval=FALSE}
+passwords %>% na.omit() %>% mutate(freq= str_count(password, pattern = "[\\d]")) %>%
+  select(freq, time_unit)%>%
+  group_by(time_unit)%>%  
+  skim() %>%  yank("numeric")%>%
+  select(-c("skim_variable", "n_missing", "complete_rate", "hist")) %>%
+  kbl(booktabs = T, digits = 2, linesep ="",
+      col.names = c("time_unit", "Media", "Desv. Est.", "Min", "p25", "p50", "p75", "Max")) %>%
+  kable_styling(font_size = 10, latex_options = c("striped", "hold_position"))
+```
